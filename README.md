@@ -1,3 +1,9 @@
+# Задачи для 30-минутного Интервью
+
+Документ с готовыми решениями для наиболее вероятных задач на техническом интервью.
+
+---
+
 ## Оглавление
 
 1. [Добавить новый тип челленджа "multiple_of" (Вероятность: 90%)](#1-добавить-новый-тип-челленджа-multiple_of-вероятность-90)
@@ -18,52 +24,79 @@
 16. [Добавить endpoint для истории попыток (Вероятность: 35%)](#16-добавить-endpoint-для-истории-попыток-вероятность-35)
 17. [Ограничить перемещение точек только по X (Вероятность: 32%)](#17-ограничить-перемещение-точек-только-по-x-вероятность-32)
 18. [Добавить звуковые эффекты (Вероятность: 30%)](#18-добавить-звуковые-эффекты-вероятность-30)
+19. [Добавить баг: при клике снова на сабмит при любом фидбеке в статистику в тотал добавляется 1 (Вероятность: 50%)](#19-добавить-баг-при-клике-снова-на-сабмит-при-любом-фидбеке-в-статистику-в-тотал-добавляется-1-вероятность-50)
+20. [Авторизация простая через JWT (Вероятность: 60%)](#20-авторизация-простая-через-jwt-вероятность-60)
+21. [Новый тип челленджа "average_y" (Вероятность: 70%)](#21-новый-тип-челленджа-average_y-вероятность-70)
+22. [Новый тип челленджа "sum_in_range" (Вероятность: 70%)](#22-новый-тип-челленджа-sum_in_range-вероятность-70)
+23. [Добавить фильтры в /history (Вероятность: 45%)](#23-добавить-фильтры-в-history-вероятность-45)
+
 ---
+
 ## 1. Добавить новый тип челленджа "multiple_of" (Вероятность: 90%)
+
 ### Описание
 Добавить новый тип челленджа, который требует, чтобы range был кратен указанному числу (например, кратен 50).
+
 **Примечание**: `exact` проверяет точные min/max значения, а `multiple_of` проверяет только range (разницу), что делает его концептуально отличным.
+
 ### Решение
+
 #### Шаг 1: Обновить `backend/api/challenges.py`
 Добавить новые челленджи в массив `CHALLENGE_TYPES`:
+
 ```python
 {"type": "multiple_of", "value": 50, "description": "Make the range a multiple of 50"},
 {"type": "multiple_of", "value": 100, "description": "Make the range a multiple of 100"},
 {"type": "multiple_of", "value": 25, "description": "Make the range a multiple of 25"},
 ```
+
 #### Шаг 2: Обновить `backend/api/views.py`
 Добавить логику валидации в функцию `validate_range`:
+
 ```python
 elif challenge_type == "multiple_of":
     divisor = challenge.get('value', 50)
     is_correct = current_range % divisor == 0
     feedback = f"Your range is {current_range:.0f}. Target: multiple of {divisor}. {'✓ Correct!' if is_correct else '✗ Try again!'}"
 ```
+
 #### Шаг 3: Обновить `frontend/src/components/Tutor.jsx`
 Добавить отображение нового типа челленджа:
+
 ```jsx
 {challenge.type === 'multiple_of' && (
   <span>Target: Range must be a multiple of {challenge.value}</span>
 )}
 ```
+
+### Время выполнения: 15-20 минут
+
 ---
+
 ## 2. Добавить новый тип челленджа "close_to" (Вероятность: 85%)
+
 ### Описание
 Добавить новый тип челленджа, который требует, чтобы range был близок к указанному значению (например, ±10).
+
 **Разница с `exact`**: 
 - `exact` проверяет min и max значения (границы диапазона) с допуском ±10
 - `close_to` проверяет только range (разницу), не важно какие min/max
+
 **Пример**: 
 - `exact` min=150, max=400 → нужно min в диапазоне 140-160 И max в диапазоне 390-410
 - `close_to` value=300 → нужно range≈300 (может быть min=100, max=400 или min=200, max=500)
+
 ### Решение
+
 #### Шаг 1: Обновить `backend/api/challenges.py`
 Добавить новые челленджи в массив `CHALLENGE_TYPES`:
+
 ```python
 {"type": "close_to", "value": 300, "tolerance": 10, "description": "Make the range close to 300 (±10)"},
 {"type": "close_to", "value": 250, "tolerance": 15, "description": "Make the range close to 250 (±15)"},
 {"type": "close_to", "value": 350, "tolerance": 20, "description": "Make the range close to 350 (±20)"},
 ```
+
 #### Шаг 2: Обновить `backend/api/views.py`
 Добавить логику валидации в функцию `validate_range`:
 
@@ -74,6 +107,7 @@ elif challenge_type == "close_to":
     is_correct = abs(current_range - target) <= tolerance
     feedback = f"Your range is {current_range:.0f}. Target: close to {target} (±{tolerance}). {'✓ Correct!' if is_correct else '✗ Try again!'}"
 ```
+
 #### Шаг 3: Обновить `frontend/src/components/Tutor.jsx`
 Добавить отображение нового типа челленджа:
 
@@ -82,7 +116,11 @@ elif challenge_type == "close_to":
   <span>Target: Range close to {challenge.value} (±{challenge.tolerance})</span>
 )}
 ```
+
+### Время выполнения: 15-20 минут
+
 ---
+
 ## 3. Исправить drag-and-drop: ограничить только Y-ось (Вероятность: 85%)
 
 ### Описание
@@ -123,6 +161,8 @@ const handleMouseMove = useCallback((e) => {
   onPointUpdate(updatedPoints);
 }, [draggedPoint, dragStart, graphData, getChartBounds, points, onPointUpdate]);
 ```
+
+### Время выполнения: 10-15 минут
 
 ---
 
@@ -242,6 +282,9 @@ import ProgressBar from './components/ProgressBar';
   />
 )}
 ```
+
+### Время выполнения: 20-25 минут
+
 ---
 
 ## 5. Улучшить обработку ошибок (визуальное отображение) (Вероятность: 65%)
@@ -331,6 +374,9 @@ const handleSubmit = async () => {
   </div>
 )}
 ```
+
+### Время выполнения: 15-20 минут
+
 ---
 
 ## 6. Подсвечивать точки, выходящие за диапазон (Вероятность: 62%)
@@ -428,6 +474,9 @@ function BubbleGraph({ graphData, points, onPointUpdate, challenge }) {
   // ... остальной код
 }
 ```
+
+### Время выполнения: 15-20 минут
+
 ---
 
 ## 7. Добавить счётчик попыток (Вероятность: 57%)
@@ -498,6 +547,8 @@ const loadChallenge = async () => {
   </div>
 )}
 ```
+
+### Время выполнения: 10-15 минут
 
 ---
 
@@ -618,6 +669,8 @@ export default Tutor;
 <Tutor challenge={challenge} points={points} />
 ```
 
+### Время выполнения: 20-25 минут
+
 ---
 
 ## 9. Добавить отображение координат под графиком (Вероятность: 52%)
@@ -692,6 +745,9 @@ export default Tutor;
   </div>
 </div>
 ```
+
+### Время выполнения: 10-15 минут
+
 ---
 
 ## 10. Добавить Undo/Redo функциональность (Вероятность: 50%)
@@ -776,6 +832,9 @@ const loadInitialData = async () => {
   </button>
 </div>
 ```
+
+### Время выполнения: 25-30 минут
+
 ---
 
 ## 11. Добавить анимацию при успехе (Вероятность: 45%)
@@ -896,6 +955,8 @@ export default Feedback;
 }
 ```
 
+### Время выполнения: 15-20 минут
+
 ---
 
 ## 12. Добавить точку кликом по графику (Вероятность: 45%)
@@ -1006,6 +1067,8 @@ const handlePointUpdate = (updatedPoints) => {
 };
 ```
 
+### Время выполнения: 20-25 минут
+
 ---
 
 ## 13. Экспорт статистики в JSON (кнопка → файл) (Вероятность: 42%)
@@ -1079,6 +1142,8 @@ const handleExportStats = () => {
   </button>
 </div>
 ```
+
+### Время выполнения: 15-20 минут
 
 ---
 
@@ -1251,6 +1316,9 @@ const handlePointUpdate = (updatedPoints) => {
   setPoints(updatedPoints);
 };
 ```
+
+### Время выполнения: 20-25 минут
+
 ---
 
 ## 15. Добавить фильтрацию челленджей по типу (Вероятность: 40%)
@@ -1330,6 +1398,9 @@ const loadChallenge = async (type = null) => {
   </select>
 </div>
 ```
+
+### Время выполнения: 20-25 минут
+
 ---
 
 ## 16. Добавить endpoint для истории попыток (Вероятность: 35%)
@@ -1428,6 +1499,9 @@ urlpatterns = [
     path('history/', views.get_attempt_history, name='get_attempt_history'),
 ]
 ```
+
+### Время выполнения: 25-30 минут
+
 ---
 
 ## 17. Ограничить перемещение точек только по X (Вероятность: 32%)
@@ -1470,6 +1544,9 @@ const handleMouseMove = useCallback((e) => {
   onPointUpdate(updatedPoints);
 }, [draggedPoint, dragStart, graphData, getChartBounds, points, onPointUpdate]);
 ```
+
+### Время выполнения: 10-15 минут
+
 ---
 
 ## 18. Добавить звуковые эффекты (Вероятность: 30%)
@@ -1563,6 +1640,7 @@ const playFailureSound = () => {
 };
 ```
 
+### Время выполнения: 15-20 минут
     // Если клик был по точке, не создаём новую
     return;
   }
@@ -1655,3 +1733,614 @@ const handlePointUpdate = (updatedPoints) => {
   setPoints(updatedPoints);
 };
 ```
+
+### Время выполнения: 20-25 минут
+
+---
+
+## 18. Добавить удаление точек (Вероятность: 40%)
+
+### Описание
+Добавить возможность удалять точки с графика (например, двойным кликом или через контекстное меню).
+
+### Решение
+
+#### Обновить `frontend/src/components/BubbleGraph.jsx`
+
+Добавить обработчик удаления точки:
+
+```jsx
+// Добавить функцию удаления точки
+const handlePointDelete = useCallback((pointId, e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  
+  // Удаляем точку из списка
+  const updatedPoints = points.filter(p => p.id !== pointId);
+  onPointUpdate(updatedPoints);
+}, [points, onPointUpdate]);
+
+// Обновить renderCustomShape для добавления обработчика удаления:
+const renderCustomShape = useCallback((props) => {
+  const { cx, cy, payload, z } = props;
+  if (cx == null || cy == null) return null;
+  
+  const radius = z / 2;
+  const pointId = payload.id;
+  const isDragged = draggedPoint === pointId;
+  
+  return (
+    <g>
+      <circle
+        cx={cx}
+        cy={cy}
+        r={radius}
+        fill={isDragged ? '#764ba2' : '#667eea'}
+        stroke="#fff"
+        strokeWidth={2}
+        style={{ cursor: 'pointer' }}
+        onMouseDown={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          handleBubbleMouseDown(e, payload);
+        }}
+      />
+      {/* Добавляем кнопку удаления (появляется при hover) */}
+      <g
+        className="delete-button"
+        style={{
+          opacity: 0,
+          transition: 'opacity 0.2s',
+          cursor: 'pointer'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.opacity = 1;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.opacity = 0;
+        }}
+        onDoubleClick={(e) => handlePointDelete(pointId, e)}
+      >
+        <circle
+          cx={cx}
+          cy={cy - radius - 15}
+          r={8}
+          fill="#ff6b6b"
+          stroke="#fff"
+          strokeWidth={2}
+        />
+        <text
+          x={cx}
+          y={cy - radius - 15}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fill="#fff"
+          fontSize="10"
+          fontWeight="bold"
+        >
+          ×
+        </text>
+      </g>
+    </g>
+  );
+}, [draggedPoint, handleBubbleMouseDown, handlePointDelete]);
+```
+
+Альтернативный вариант - удаление по двойному клику прямо на точку:
+
+```jsx
+const renderCustomShape = useCallback((props) => {
+  const { cx, cy, payload, z } = props;
+  if (cx == null || cy == null) return null;
+  
+  const radius = z / 2;
+  const pointId = payload.id;
+  const isDragged = draggedPoint === pointId;
+  
+  const point = points.find(p => p.id === pointId);
+  if (!point) return null;
+  
+  let clickTimeout = null;
+  
+  return (
+    <circle
+      cx={cx}
+      cy={cy}
+      r={radius}
+      fill={isDragged ? '#764ba2' : '#667eea'}
+      stroke="#fff"
+      strokeWidth={2}
+      style={{ cursor: 'pointer' }}
+      onMouseDown={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Проверяем двойной клик
+        if (clickTimeout) {
+          clearTimeout(clickTimeout);
+          clickTimeout = null;
+          // Это двойной клик - удаляем точку
+          handlePointDelete(pointId, e);
+        } else {
+          // Одиночный клик - начинаем перетаскивание
+          clickTimeout = setTimeout(() => {
+            clickTimeout = null;
+            handleBubbleMouseDown(e, point);
+          }, 200);
+        }
+      }}
+    />
+  );
+}, [draggedPoint, points, handleBubbleMouseDown, handlePointDelete]);
+```
+
+Более простой вариант - удаление через правый клик (контекстное меню):
+
+```jsx
+const handlePointContextMenu = useCallback((pointId, e) => {
+  e.preventDefault();
+  
+  if (window.confirm('Delete this point?')) {
+    const updatedPoints = points.filter(p => p.id !== pointId);
+    onPointUpdate(updatedPoints);
+  }
+}, [points, onPointUpdate]);
+
+// В renderCustomShape:
+<circle
+  // ... остальные атрибуты ...
+  onContextMenu={(e) => handlePointContextMenu(pointId, e)}
+/>
+```
+
+#### Обновить `frontend/src/App.jsx`
+
+Убедиться, что минимальное количество точек проверяется (если нужно сохранить минимум):
+
+```jsx
+const handlePointUpdate = (updatedPoints) => {
+  // Опционально: проверка минимального количества точек
+  if (updatedPoints.length < 2) {
+    alert('You need at least 2 points on the graph.');
+    return;
+  }
+  setPoints(updatedPoints);
+};
+```
+
+### Время выполнения: 20-25 минут
+
+---
+
+## 19. Добавить баг: при клике снова на сабмит при любом фидбеке в статистику в тотал добавляется 1 (Вероятность: 50%)
+
+### Описание
+Добавить баг, при котором при повторном клике на Submit (даже если feedback уже есть) в статистику в total добавляется 1.
+
+### Решение
+
+#### Обновить `frontend/src/App.jsx`
+
+Проблема в том, что при каждом вызове `handleSubmit` статистика обновляется без проверки, был ли уже получен feedback для этого челленджа. Нужно убрать проверку или добавить баг:
+
+```jsx
+const handleSubmit = async () => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/validate/`, {
+      points: points,
+      challenge: challenge,
+    });
+    setFeedback(response.data);
+
+    // БАГ: Статистика обновляется при каждом клике на Submit, 
+    // даже если feedback уже есть. Это означает, что при повторном 
+    // клике на Submit при любом фидбеке в total добавляется 1
+    const newStats = {
+      ...statistics,
+      total: statistics.total + 1,  // Всегда добавляется 1, даже при повторном клике
+      completed: response.data.is_correct ? statistics.completed + 1 : statistics.completed,
+    };
+    newStats.successRate = newStats.total > 0
+      ? Math.round((newStats.completed / newStats.total) * 100)
+      : 0;
+    setStatistics(newStats);
+    localStorage.setItem('rangeAppStatistics', JSON.stringify(newStats));
+  } catch (error) {
+    console.error('Error validating:', error);
+    setFeedback({
+      is_correct: false,
+      feedback: 'Error validating your answer. Please try again.',
+    });
+  }
+};
+```
+
+**Правильное решение (исправление бага):**
+Добавить проверку, чтобы статистика обновлялась только один раз для каждого челленджа:
+
+```jsx
+const [lastSubmittedChallengeId, setLastSubmittedChallengeId] = useState(null);
+
+const handleSubmit = async () => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/validate/`, {
+      points: points,
+      challenge: challenge,
+    });
+    setFeedback(response.data);
+
+    // Исправление: проверяем, был ли уже отправлен этот челлендж
+    const challengeId = challenge?.type + challenge?.value + challenge?.min + challenge?.max;
+    if (lastSubmittedChallengeId !== challengeId) {
+      const newStats = {
+        ...statistics,
+        total: statistics.total + 1,
+        completed: response.data.is_correct ? statistics.completed + 1 : statistics.completed,
+      };
+      newStats.successRate = newStats.total > 0
+        ? Math.round((newStats.completed / newStats.total) * 100)
+        : 0;
+      setStatistics(newStats);
+      localStorage.setItem('rangeAppStatistics', JSON.stringify(newStats));
+      setLastSubmittedChallengeId(challengeId);
+    }
+  } catch (error) {
+    console.error('Error validating:', error);
+    setFeedback({
+      is_correct: false,
+      feedback: 'Error validating your answer. Please try again.',
+    });
+  }
+};
+```
+
+### Время выполнения: 10-15 минут
+
+---
+
+## 20. Авторизация простая через JWT (Вероятность: 60%)
+
+### Описание
+Добавить простую авторизацию через JWT токены. Пользователь должен иметь возможность залогиниться и получать токен, который затем используется для доступа к защищенным эндпоинтам.
+
+### Решение
+
+#### Шаг 1: Обновить `backend/requirements.txt`
+
+```txt
+PyJWT==2.8.0
+```
+
+#### Шаг 2: Обновить `backend/api/views.py`
+
+```python
+import jwt
+from datetime import datetime, timedelta
+from django.conf import settings
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+
+# JWT Secret Key (в продакшене должен быть в .env)
+JWT_SECRET_KEY = getattr(settings, 'JWT_SECRET_KEY', 'your-secret-key-change-in-production')
+JWT_ALGORITHM = 'HS256'
+
+
+def generate_jwt_token(username):
+    """Generate JWT token for user."""
+    payload = {
+        'username': username,
+        'exp': datetime.utcnow() + timedelta(days=7),
+        'iat': datetime.utcnow()
+    }
+    token = jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+    return token
+
+
+def verify_jwt_token(token):
+    """Verify JWT token and return username."""
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        return payload.get('username')
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def login(request):
+    """Simple login endpoint that returns JWT token."""
+    username = request.data.get('username')
+    password = request.data.get('password')
+    
+    # Простая авторизация: любой username/password валидны
+    # В реальном приложении здесь должна быть проверка в базе данных
+    if username and password:
+        token = generate_jwt_token(username)
+        return Response({
+            'token': token,
+            'username': username
+        })
+    else:
+        return Response(
+            {'error': 'Username and password required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+```
+
+#### Шаг 3: Обновить `backend/api/urls.py`
+
+```python
+urlpatterns = [
+    path('data/', views.get_initial_data, name='get_initial_data'),
+    path('challenge/', views.get_challenge, name='get_challenge'),
+    path('validate/', views.validate_range, name='validate_range'),
+    path('login/', views.login, name='login'),
+]
+```
+
+#### Шаг 4: Обновить `frontend/src/App.jsx` для использования JWT
+
+```jsx
+const [token, setToken] = useState(localStorage.getItem('jwt_token'));
+
+// Функция для логина
+const handleLogin = async (username, password) => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/login/`, {
+      username,
+      password
+    });
+    const { token } = response.data;
+    setToken(token);
+    localStorage.setItem('jwt_token', token);
+    // Устанавливаем токен в заголовки для всех последующих запросов
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  } catch (error) {
+    console.error('Login error:', error);
+  }
+};
+
+// При загрузке приложения, если есть токен, устанавливаем его
+useEffect(() => {
+  if (token) {
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  }
+}, [token]);
+```
+
+### Время выполнения: 30-40 минут
+
+---
+
+## 21. Новый тип челленджа "average_y" (Вероятность: 70%)
+
+### Описание
+Добавить новый тип челленджа "average_y", который проверяет, чтобы среднее значение y-координат точек находилось в заданном диапазоне.
+
+### Решение
+
+#### Шаг 1: Обновить `backend/api/challenges.py`
+
+Добавить новые челленджи в массив `CHALLENGE_TYPES`:
+
+```python
+{"type": "average_y", "min": 200, "max": 300, "description": "Make the average y-coordinate between 200 and 300"},
+{"type": "average_y", "min": 250, "max": 350, "description": "Make the average y-coordinate between 250 and 350"},
+{"type": "average_y", "min": 180, "max": 280, "description": "Make the average y-coordinate between 180 and 280"},
+```
+
+#### Шаг 2: Обновить `backend/api/views.py`
+
+Добавить логику валидации в функцию `validate_range`:
+
+```python
+elif challenge_type == "average_y":
+    min_val = challenge.get('min', 200)
+    max_val = challenge.get('max', 300)
+    average_y = sum(y_values) / len(y_values) if y_values else 0
+    is_correct = min_val <= average_y <= max_val
+    feedback = f"Your average y-coordinate is {average_y:.2f}. Target: between {min_val} and {max_val}. {'✓ Correct!' if is_correct else '✗ Try again!'}"
+```
+
+#### Шаг 3: Обновить `frontend/src/components/Tutor.jsx`
+
+Добавить отображение нового типа челленджа:
+
+```jsx
+{challenge.type === 'average_y' && (
+  <span>Target: Average y-coordinate between {challenge.min} and {challenge.max}</span>
+)}
+```
+
+### Время выполнения: 15-20 минут
+
+---
+
+## 22. Новый тип челленджа "sum_in_range" (Вероятность: 70%)
+
+### Описание
+Добавить новый тип челленджа "sum_in_range", который проверяет, чтобы сумма всех y-координат попадала в заданный диапазон.
+
+### Решение
+
+#### Шаг 1: Обновить `backend/api/challenges.py`
+
+Добавить новые челленджи в массив `CHALLENGE_TYPES`:
+
+```python
+{"type": "sum_in_range", "min": 1000, "max": 2000, "description": "Make the sum of all y-coordinates between 1000 and 2000"},
+{"type": "sum_in_range", "min": 1500, "max": 2500, "description": "Make the sum of all y-coordinates between 1500 and 2500"},
+{"type": "sum_in_range", "min": 800, "max": 1500, "description": "Make the sum of all y-coordinates between 800 and 1500"},
+```
+
+#### Шаг 2: Обновить `backend/api/views.py`
+
+Добавить логику валидации в функцию `validate_range`:
+
+```python
+elif challenge_type == "sum_in_range":
+    min_val = challenge.get('min', 1000)
+    max_val = challenge.get('max', 2000)
+    sum_y = sum(y_values)
+    is_correct = min_val <= sum_y <= max_val
+    feedback = f"Sum of all y-coordinates is {sum_y:.0f}. Target: between {min_val} and {max_val}. {'✓ Correct!' if is_correct else '✗ Try again!'}"
+```
+
+#### Шаг 3: Обновить `frontend/src/components/Tutor.jsx`
+
+Добавить отображение нового типа челленджа:
+
+```jsx
+{challenge.type === 'sum_in_range' && (
+  <span>Target: Sum of all y-coordinates between {challenge.min} and {challenge.max}</span>
+)}
+```
+
+### Время выполнения: 15-20 минут
+
+---
+
+## 23. Добавить фильтры в /history (Вероятность: 45%)
+
+### Описание
+Добавить endpoint `/history` для получения истории попыток с поддержкой query-параметров для фильтрации:
+- `?type=multiple_of` - фильтр по типу челленджа
+- `?success=true` - фильтр по успешности (true/false)
+- `?from=2024-01-01` - фильтр по дате (от указанной даты)
+
+### Решение
+
+#### Шаг 1: Создать модель в `backend/api/models.py`
+
+```python
+from django.db import models
+
+class Attempt(models.Model):
+    """Model to store user attempts for challenges."""
+    challenge_type = models.CharField(max_length=50)
+    challenge_value = models.IntegerField(null=True, blank=True)
+    challenge_min = models.IntegerField(null=True, blank=True)
+    challenge_max = models.IntegerField(null=True, blank=True)
+    user_range = models.FloatField(null=True, blank=True)
+    user_average_y = models.FloatField(null=True, blank=True)
+    user_sum_y = models.FloatField(null=True, blank=True)
+    is_correct = models.BooleanField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+```
+
+#### Шаг 2: Создать миграцию
+
+```bash
+cd backend
+python manage.py makemigrations
+python manage.py migrate
+```
+
+#### Шаг 3: Обновить `backend/api/views.py`
+
+Добавить сохранение попыток и endpoint для истории:
+
+```python
+from .models import Attempt
+from datetime import datetime
+
+# В функции validate_range, после валидации, добавить сохранение:
+attempt = Attempt(
+    challenge_type=challenge_type,
+    challenge_value=challenge.get('value'),
+    challenge_min=challenge.get('min'),
+    challenge_max=challenge.get('max'),
+    user_range=current_range,
+    user_average_y=average_y if challenge_type == 'average_y' else None,
+    user_sum_y=sum_y if challenge_type == 'sum_in_range' else None,
+    is_correct=is_correct
+)
+attempt.save()
+
+# Добавить новый endpoint:
+@api_view(['GET'])
+def get_attempt_history(request):
+    """Get history of user attempts with filters."""
+    # Фильтры из query-параметров
+    challenge_type = request.query_params.get('type', None)
+    success = request.query_params.get('success', None)
+    from_date = request.query_params.get('from', None)
+    
+    # Получаем все попытки
+    attempts = Attempt.objects.all()
+    
+    # Применяем фильтры
+    if challenge_type:
+        attempts = attempts.filter(challenge_type=challenge_type)
+    
+    if success is not None:
+        success_bool = success.lower() == 'true'
+        attempts = attempts.filter(is_correct=success_bool)
+    
+    if from_date:
+        try:
+            from_datetime = datetime.strptime(from_date, '%Y-%m-%d')
+            attempts = attempts.filter(created_at__gte=from_datetime)
+        except ValueError:
+            pass  # Игнорируем неверный формат даты
+    
+    # Ограничиваем количество результатов
+    limit = int(request.query_params.get('limit', 50))
+    attempts = attempts[:limit]
+    
+    # Формируем ответ
+    data = [{
+        'id': a.id,
+        'challenge_type': a.challenge_type,
+        'challenge_value': a.challenge_value,
+        'challenge_min': a.challenge_min,
+        'challenge_max': a.challenge_max,
+        'user_range': a.user_range,
+        'user_average_y': a.user_average_y,
+        'user_sum_y': a.user_sum_y,
+        'is_correct': a.is_correct,
+        'created_at': a.created_at.isoformat()
+    } for a in attempts]
+    
+    return Response(data)
+```
+
+#### Шаг 4: Обновить `backend/api/urls.py`
+
+```python
+urlpatterns = [
+    path('data/', views.get_initial_data, name='get_initial_data'),
+    path('challenge/', views.get_challenge, name='get_challenge'),
+    path('validate/', views.validate_range, name='validate_range'),
+    path('history/', views.get_attempt_history, name='get_attempt_history'),
+]
+```
+
+#### Шаг 5: Примеры использования
+
+```javascript
+// Получить все попытки
+GET /api/history/
+
+// Фильтр по типу
+GET /api/history/?type=multiple_of
+
+// Фильтр по успешности
+GET /api/history/?success=true
+
+// Фильтр по дате
+GET /api/history/?from=2024-01-01
+
+// Комбинация фильтров
+GET /api/history/?type=less_than&success=true&from=2024-01-01
+
+// С ограничением количества
+GET /api/history/?limit=10
+```
+
+### Время выполнения: 25-30 минут

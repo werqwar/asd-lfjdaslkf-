@@ -378,6 +378,16 @@ const handleSubmit = async () => {
 ### Описание
 Визуально выделять точки, которые находятся вне целевого диапазона для текущего челленджа. Это помогает пользователю понять, какие точки нужно переместить.
 
+**Важно:** Решение работает для всех типов челленджей:
+- `exact` - подсвечивает точки вне целевого диапазона
+- `less_than` - подсвечивает крайние точки, если range слишком большой
+- `greater_than` - подсвечивает все точки, если range слишком маленький
+- `between` - подсвечивает крайние точки, если range вне диапазона
+- `multiple_of` - подсвечивает крайние точки, если range не кратен значению
+- `close_to` - подсвечивает крайние точки, если range не близок к значению
+- `average_y` - подсвечивает точки, которые "тянут" среднее в неправильную сторону
+- `sum_in_range` - подсвечивает точки, которые "тянут" сумму в неправильную сторону
+
 ### Решение
 
 #### Шаг 1: Обновить `frontend/src/components/BubbleGraph.jsx`
@@ -392,23 +402,85 @@ const isPointOutOfRange = useCallback((point, challenge) => {
   const currentMin = Math.min(...yValues);
   const currentMax = Math.max(...yValues);
   const currentRange = currentMax - currentMin;
+  const averageY = yValues.reduce((sum, y) => sum + y, 0) / yValues.length;
+  const sumY = yValues.reduce((sum, y) => sum + y, 0);
   
-  const { type, value, min, max } = challenge;
+  const { type, value, min, max, tolerance } = challenge;
   
   if (type === 'exact') {
     const targetMin = min;
     const targetMax = max;
     // Точка выходит за диапазон, если она ниже min-10 или выше max+10
     return point.y < targetMin - 10 || point.y > targetMax + 10;
-  } else if (type === 'less_than') {
-    // Если range >= value, то все точки "плохие" (нужно уменьшить range)
-    return currentRange >= value;
-  } else if (type === 'greater_than') {
-    // Если range <= value, то все точки "плохие" (нужно увеличить range)
-    return currentRange <= value;
-  } else if (type === 'between') {
-    // Если range вне диапазона, все точки "плохие"
-    return currentRange < min || currentRange > max;
+  } 
+  else if (type === 'less_than') {
+    // Если range >= value, подсвечиваем крайние точки (min и max)
+    if (currentRange >= value) {
+      return point.y === currentMin || point.y === currentMax;
+    }
+    return false;
+  } 
+  else if (type === 'greater_than') {
+    // Если range <= value, подсвечиваем все точки (нужно увеличить range)
+    if (currentRange <= value) {
+      return true;
+    }
+    return false;
+  } 
+  else if (type === 'between') {
+    // Если range вне диапазона, подсвечиваем крайние точки
+    if (currentRange < min || currentRange > max) {
+      return point.y === currentMin || point.y === currentMax;
+    }
+    return false;
+  }
+  else if (type === 'multiple_of') {
+    // Если range не кратен value, подсвечиваем крайние точки
+    if (currentRange % value !== 0) {
+      return point.y === currentMin || point.y === currentMax;
+    }
+    return false;
+  }
+  else if (type === 'close_to') {
+    // Если range не близок к value, подсвечиваем крайние точки
+    const target = value;
+    const tol = tolerance || 10;
+    if (Math.abs(currentRange - target) > tol) {
+      return point.y === currentMin || point.y === currentMax;
+    }
+    return false;
+  }
+  else if (type === 'average_y') {
+    // Подсвечиваем точки, которые слишком далеко от целевого среднего
+    const targetMin = min;
+    const targetMax = max;
+    if (averageY < targetMin || averageY > targetMax) {
+      // Подсвечиваем точки, которые "тянут" среднее в неправильную сторону
+      if (averageY < targetMin) {
+        // Среднее слишком низкое - подсвечиваем точки ниже среднего
+        return point.y < averageY;
+      } else {
+        // Среднее слишком высокое - подсвечиваем точки выше среднего
+        return point.y > averageY;
+      }
+    }
+    return false;
+  }
+  else if (type === 'sum_in_range') {
+    // Подсвечиваем точки, если сумма вне диапазона
+    const targetMin = min;
+    const targetMax = max;
+    if (sumY < targetMin || sumY > targetMax) {
+      // Подсвечиваем точки, которые "тянут" сумму в неправильную сторону
+      if (sumY < targetMin) {
+        // Сумма слишком маленькая - подсвечиваем точки с маленькими значениями
+        return point.y < averageY;
+      } else {
+        // Сумма слишком большая - подсвечиваем точки с большими значениями
+        return point.y > averageY;
+      }
+    }
+    return false;
   }
   
   return false;

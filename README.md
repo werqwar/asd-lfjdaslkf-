@@ -881,49 +881,47 @@ export default Tutor;
 const [history, setHistory] = useState([]);
 const [historyIndex, setHistoryIndex] = useState(-1);
 
-// Обновить handlePointUpdate:
-const handlePointUpdate = (updatedPoints) => {
-  setPoints(updatedPoints);
-  
-  // Добавить в историю
-  const newHistory = history.slice(0, historyIndex + 1);
-  newHistory.push([...updatedPoints]);
-  setHistory(newHistory);
-  setHistoryIndex(newHistory.length - 1);
-};
-
-// Добавить функции undo/redo:
 const handleUndo = () => {
-  if (historyIndex > 0) {
-    const newIndex = historyIndex - 1;
-    setHistoryIndex(newIndex);
-    setPoints(history[newIndex]);
-  }
+    if (historyIndex > 0) {
+        const newIndex = historyIndex - 1;
+        setHistoryIndex(newIndex);
+        setPoints(history[newIndex]);
+    }
 };
 
 const handleRedo = () => {
-  if (historyIndex < history.length - 1) {
-    const newIndex = historyIndex + 1;
-    setHistoryIndex(newIndex);
-    setPoints(history[newIndex]);
-  }
+    if (historyIndex < history.length - 1) {
+        const newIndex = historyIndex + 1;
+        setHistoryIndex(newIndex);
+        setPoints(history[newIndex]);
+    }
 };
 
-// При загрузке данных, инициализировать историю:
 const loadInitialData = async () => {
-  try {
-    const response = await axios.get(`${API_BASE_URL}/data/`);
-    setGraphData(response.data);
-    const initial = response.data.points;
-    setInitialPoints(initial);
-    setPoints(initial);
-    setHistory([initial]);
-    setHistoryIndex(0);
-    setLoading(false);
-  } catch (error) {
-    console.error('Error loading data:', error);
-    setLoading(false);
-  }
+    try {
+      const response = await axios.get(`${API_BASE_URL}/data/`);
+      setGraphData(response.data);
+      const initial = response.data.points;
+      setInitialPoints(initial);
+      setPoints(initial);
+      setHistory([initial.map(p => ({ ...p }))]);
+      setHistoryIndex(0);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      setLoading(false);
+    }
+};
+
+const handlePointUpdate = (updatedPoints) => {
+    setPoints(updatedPoints);
+
+    const newHistory = history.slice(0, historyIndex + 1);
+    const snapshot = updatedPoints.map(p => ({ ...p }));
+
+    newHistory.push(snapshot);
+    setHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
 };
 
 // В JSX, добавить кнопки в controls:
@@ -950,9 +948,6 @@ const loadInitialData = async () => {
   </button>
 </div>
 ```
-
-### Время выполнения: 25-30 минут
-
 ---
 
 ## 11. Добавить анимацию при успехе (Вероятность: 45%)

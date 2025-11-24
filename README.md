@@ -23,6 +23,11 @@
 21. [Новый тип челленджа "average_y" (Вероятность: 70%)](#21-новый-тип-челленджа-average_y-вероятность-70)
 22. [Новый тип челленджа "sum_in_range" (Вероятность: 70%)](#22-новый-тип-челленджа-sum_in_range-вероятность-70)
 23. [Добавить фильтры в /history (Вероятность: 45%)](#23-добавить-фильтры-в-history-вероятность-45)
+24. [Переключатель темы (светлая/темная)](#24-переключатель-темы-светлая-темная)
+25. [Среднее время решения](#25-среднее-время-решения)
+26. [Индикатор прогресса (процент)](#26-индикатор-прогресса-процент)
+27. [Градиентная заливка между min и max](#27-градиентная-заливка-между-min-и-max)
+28. [Несколько наборов данных](#28-несколько-наборов-данных)
 
 ---
 
@@ -2439,3 +2444,513 @@ GET /api/history/?limit=10
 ```
 
 ### Время выполнения: 25-30 минут
+
+## 24. Переключатель темы (светлая/темная)
+
+добавить кнопку/переключатель, который меняет цветовую схему приложения (темный/светлый фон). Сохранять выбор в localStorage.
+  
+  **Код решения:**
+
+  **App.jsx:**
+  ```jsx
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem('rangeAppTheme');
+    return saved || 'light';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    localStorage.setItem('rangeAppTheme', newTheme);
+  };
+
+  // В JSX добавить в header:
+  <div className="header-row">
+    <h1 className="title">Range Teaching App</h1>
+    <button className="btn-theme" onClick={toggleTheme} title="Toggle theme">
+      {theme === 'light' ? '🌙' : '☀️'}
+    </button>
+  </div>
+  ```
+
+  **App.css:**
+  ```css
+  :root[data-theme="light"] {
+    --bg-primary: white;
+    --bg-secondary: #f8f9fa;
+    --text-primary: #333;
+    --text-secondary: #666;
+    --shadow: rgba(0, 0, 0, 0.3);
+  }
+
+  :root[data-theme="dark"] {
+    --bg-primary: #1a1a2e;
+    --bg-secondary: #16213e;
+    --text-primary: #e4e4e4;
+    --text-secondary: #b0b0b0;
+    --shadow: rgba(0, 0, 0, 0.6);
+  }
+
+  .header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .btn-theme {
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-color);
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    font-size: 24px;
+    cursor: pointer;
+  }
+
+  .container {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+  }
+  ```
+
+## 25. Среднее время решения
+записывать время от начала челленджа до успешной валидации, рассчитывать и показывать среднее время.
+
+- **Лучший результат по времени** — сохранять и отображать минимальное время, за которое был решен челлендж.
+  
+  **Код решения:**
+
+  **App.jsx:**
+  ```jsx
+  const [challengeStartTime, setChallengeStartTime] = useState(null);
+  
+  const [statistics, setStatistics] = useState(() => {
+    const saved = localStorage.getItem('rangeAppStatistics');
+    return saved ? JSON.parse(saved) : { 
+      completed: 0, 
+      total: 0, 
+      successRate: 0,
+      averageTime: 0,
+      bestTime: null,
+      times: []
+    };
+  });
+
+  const loadChallenge = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/challenge/`);
+      setChallenge(response.data);
+      setFeedback(null);
+      setChallengeStartTime(Date.now()); // Установить время начала
+    } catch (error) {
+      console.error('Error loading challenge:', error);
+    }
+  };
+
+  const handleSubmit = async () => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/validate/`, {
+        points: points,
+        challenge: challenge,
+      });
+      setFeedback(response.data);
+
+      let solveTime = null;
+      if (challengeStartTime && response.data.is_correct) {
+        solveTime = Math.round((Date.now() - challengeStartTime) / 1000);
+      }
+
+      const newStats = {
+        ...statistics,
+        total: statistics.total + 1,
+        completed: response.data.is_correct ? statistics.completed + 1 : statistics.completed,
+        times: response.data.is_correct 
+          ? [...statistics.times, solveTime]
+          : statistics.times,
+      };
+      
+      newStats.successRate = newStats.total > 0
+        ? Math.round((newStats.completed / newStats.total) * 100)
+        : 0;
+        
+      newStats.averageTime = newStats.times.length > 0
+        ? Math.round(newStats.times.reduce((a, b) => a + b, 0) / newStats.times.length)
+        : 0;
+        
+      newStats.bestTime = newStats.times.length > 0
+        ? Math.min(...newStats.times)
+        : null;
+
+      setStatistics(newStats);
+      localStorage.setItem('rangeAppStatistics', JSON.stringify(newStats));
+    } catch (error) {
+      console.error('Error validating:', error);
+      setFeedback({
+        is_correct: false,
+        feedback: 'Error validating your answer. Please try again.',
+      });
+    }
+  };
+
+  // В JSX добавить в statistics-dashboard:
+  <div className="stat-item">
+    <span className="stat-label">Avg Time:</span>
+    <span className="stat-value">{statistics.averageTime}s</span>
+  </div>
+  <div className="stat-item">
+    <span className="stat-label">Best Time:</span>
+    <span className="stat-value">{statistics.bestTime !== null ? `${statistics.bestTime}s` : '-'}</span>
+  </div>
+  ```
+
+## 26. Индикатор прогресса (процент)
+
+рассчитывать процент выполнения (например, если цель range > 300, а текущий 150, то 50%). Показывать прогресс-бар.
+  
+  **Код решения:**
+
+  **App.jsx - передать challenge в BubbleGraph:**
+  ```jsx
+  <BubbleGraph
+    graphData={graphData}
+    points={points}
+    challenge={challenge}
+    onPointUpdate={handlePointUpdate}
+  />
+  ```
+
+  **BubbleGraph.jsx:**
+  ```jsx
+  function BubbleGraph({ graphData, points, challenge, onPointUpdate }) {
+    // ... существующий код ...
+
+    const calculateProgress = useMemo(() => {
+      if (!challenge) return 0;
+      
+      const yValues = points.map(p => p.y);
+      const min = Math.min(...yValues);
+      const max = Math.max(...yValues);
+      const currentRange = max - min;
+
+      switch (challenge.type) {
+        case 'greater_than':
+          const target = challenge.value;
+          return Math.min(100, (currentRange / target) * 100);
+        
+        case 'less_than':
+          const maxPossible = graphData.yAxis.max - graphData.yAxis.min;
+          return Math.min(100, ((target - currentRange) / maxPossible) * 100);
+        
+        case 'between':
+          const rangeMin = challenge.min;
+          const rangeMax = challenge.max;
+          if (currentRange >= rangeMin && currentRange <= rangeMax) return 100;
+          if (currentRange < rangeMin) {
+            return Math.min(100, (currentRange / rangeMin) * 100);
+          }
+          return 0;
+        
+        case 'exact':
+          // Для exact сложнее, можно упростить
+          return 50; // placeholder
+        
+        default:
+          return 0;
+      }
+    }, [points, challenge, graphData]);
+
+    return (
+      <div className={styles['bubble-graph-container']}>
+        {/* ... существующий код ... */}
+        
+        <div className={styles['progress-container']}>
+          <div className={styles['progress-label']}>
+            Progress: {Math.round(calculateProgress)}%
+          </div>
+          <div className={styles['progress-bar']}>
+            <div 
+              className={styles['progress-fill']}
+              style={{ width: `${calculateProgress}%` }}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+  ```
+
+  **BubbleGraph.module.css:**
+  ```css
+  .progress-container {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+  }
+
+  .progress-label {
+    text-align: center;
+    margin-bottom: 10px;
+    font-weight: 600;
+    color: #333;
+  }
+
+  .progress-bar {
+    width: 100%;
+    height: 20px;
+    background: #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff6b6b 0%, #ffd93d 50%, #51cf66 100%);
+    transition: width 0.3s ease;
+  }
+  ```
+
+## 27. Градиентная заливка между min и max
+
+на графике закрасить область между минимальным и максимальным значениями градиентом (например, от красного к зеленому).
+  
+  **Код решения:**
+
+  **BubbleGraph.jsx:**
+  ```jsx
+  import {
+    // ... существующие импорты ...
+    ReferenceArea,
+  } from 'recharts';
+
+  // В компоненте, в ScatterChart добавить:
+  
+  <ScatterChart
+    margin={{ top: 20, right: 80, bottom: 60, left: 80 }}
+  >
+    <defs>
+      <linearGradient id="rangeGradient" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#ff6b6b" stopOpacity={0.3} />
+        <stop offset="100%" stopColor="#51cf66" stopOpacity={0.3} />
+      </linearGradient>
+    </defs>
+    
+    <CartesianGrid strokeDasharray="3 3" />
+    
+    {/* ... XAxis, YAxis, ZAxis ... */}
+    
+    <ReferenceArea
+      y1={currentRange.min}
+      y2={currentRange.max}
+      fill="url(#rangeGradient)"
+      fillOpacity={0.4}
+    />
+    
+    <ReferenceLine
+      y={currentRange.min}
+      stroke="#ff6b6b"
+      strokeWidth={2}
+      strokeDasharray="5 5"
+      label={{ value: `Min: ${currentRange.min}`, position: "right" }}
+    />
+    <ReferenceLine
+      y={currentRange.max}
+      stroke="#51cf66"
+      strokeWidth={2}
+      strokeDasharray="5 5"
+      label={{ value: `Max: ${currentRange.max}`, position: "right" }}
+    />
+    
+    <Scatter
+      name="Cities"
+      data={scatterData}
+      fill="#667eea"
+      cursor="pointer"
+      shape={renderCustomShape}
+    />
+  </ScatterChart>
+  ```
+
+## 28. Несколько наборов данных
+
+добавить возможность переключения между разными наборами данных (не только Metro Systems, но и другие примеры). Новый endpoint `/api/datasets/` со списком доступных наборов.
+  
+  **Код решения:**
+
+  **backend/api/graph_data.py:**
+  ```python
+  METRO_POINTS = [
+      {"id": 1, "name": "Delhi", "x": 150, "y": 180, "size": 1.5},
+      {"id": 2, "name": "Tokyo", "x": 190, "y": 200, "size": 2.5},
+      # ... остальные точки ...
+  ]
+
+  METRO_CONFIG = {
+      "title": "Metro Systems of the World",
+      "xAxis": {
+          "label": "Number of Stations",
+          "min": 100,
+          "max": 450,
+          "step": 50
+      },
+      "yAxis": {
+          "label": "Total System Length (km)",
+          "min": 150,
+          "max": 600,
+          "step": 50
+      },
+      "bubbleSize": {
+          "label": "Ridership (bn per year)",
+          "values": [1.5, 2.5, 3.5]
+      }
+  }
+
+  CITIES_POINTS = [
+      {"id": 1, "name": "Paris", "x": 50, "y": 100, "size": 2.0},
+      {"id": 2, "name": "London", "x": 60, "y": 150, "size": 2.5},
+      # ... другие точки ...
+  ]
+
+  CITIES_CONFIG = {
+      "title": "World Cities Population",
+      "xAxis": {
+          "label": "Area (km²)",
+          "min": 0,
+          "max": 200,
+          "step": 20
+      },
+      "yAxis": {
+          "label": "Population (millions)",
+          "min": 0,
+          "max": 300,
+          "step": 30
+      },
+      "bubbleSize": {
+          "label": "Density",
+          "values": [1.0, 2.0, 3.0]
+      }
+  }
+
+  DATASETS = {
+      "metro": {
+          "points": METRO_POINTS,
+          "config": METRO_CONFIG
+      },
+      "cities": {
+          "points": CITIES_POINTS,
+          "config": CITIES_CONFIG
+      }
+  }
+
+  # Для обратной совместимости
+  GRAPH_POINTS = METRO_POINTS
+  GRAPH_CONFIG = METRO_CONFIG
+  ```
+
+  **backend/api/views.py:**
+  ```python
+  from .graph_data import DATASETS
+
+  @api_view(['GET'])
+  def get_initial_data(request):
+      """Return initial graph data based on dataset_id parameter."""
+      dataset_id = request.query_params.get('dataset_id', 'metro')
+      
+      if dataset_id not in DATASETS:
+          dataset_id = 'metro'  # fallback to default
+      
+      dataset = DATASETS[dataset_id]
+      
+      try:
+          data = {
+              **dataset["config"],
+              "points": dataset["points"]
+          }
+          return Response(data)
+      except Exception as e:
+          return Response(
+              {"error": str(e)},
+              status=status.HTTP_500_INTERNAL_SERVER_ERROR
+          )
+
+  @api_view(['GET'])
+  def get_datasets(request):
+      """Return list of available datasets."""
+      datasets_list = [
+          {
+              "id": key,
+              "title": value["config"]["title"],
+              "description": f"Dataset: {key}"
+          }
+          for key, value in DATASETS.items()
+      ]
+      return Response({"datasets": datasets_list})
+  ```
+
+  **backend/api/urls.py:**
+  ```python
+  urlpatterns = [
+      path('data/', views.get_initial_data, name='get_initial_data'),
+      path('challenge/', views.get_challenge, name='get_challenge'),
+      path('validate/', views.validate_range, name='validate_range'),
+      path('datasets/', views.get_datasets, name='get_datasets'),  # новый endpoint
+  ]
+  ```
+
+  **frontend/src/App.jsx:**
+  ```jsx
+  const [datasets, setDatasets] = useState([]);
+  const [selectedDataset, setSelectedDataset] = useState('metro');
+
+  useEffect(() => {
+    loadDatasets();
+    loadInitialData();
+    loadChallenge();
+  }, []);
+
+  useEffect(() => {
+    if (selectedDataset) {
+      loadInitialData();
+    }
+  }, [selectedDataset]);
+
+  const loadDatasets = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/datasets/`);
+      setDatasets(response.data.datasets);
+    } catch (error) {
+      console.error('Error loading datasets:', error);
+    }
+  };
+
+  const loadInitialData = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/data/?dataset_id=${selectedDataset}`);
+      setGraphData(response.data);
+      const initial = response.data.points;
+      setInitialPoints(initial);
+      setPoints(initial);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      setLoading(false);
+    }
+  };
+
+  // В JSX добавить перед графиком:
+  <div className="dataset-selector">
+    <label>Select Dataset: </label>
+    <select 
+      value={selectedDataset} 
+      onChange={(e) => setSelectedDataset(e.target.value)}
+    >
+      {datasets.map(ds => (
+        <option key={ds.id} value={ds.id}>{ds.title}</option>
+      ))}
+    </select>
+  </div>
+  ```

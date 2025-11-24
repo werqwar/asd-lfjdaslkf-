@@ -170,38 +170,81 @@ const handleMouseMove = useCallback((e) => {
 #### Шаг 1: Создать компонент `frontend/src/components/ProgressBar.jsx`
 
 ```jsx
-import React from 'react';
-import styles from './ProgressBar.module.css';
-
-function ProgressBar({ currentRange, challenge }) {
+function ProgressBar({ currentRange, challenge, graphData }) {
   if (!challenge) return null;
 
   const calculateProgress = () => {
     const { type, value, min, max, tolerance } = challenge;
+    const range = Number(currentRange.range);
+    const numValue = Number(value);
     let progress = 0;
 
+    const maxPossibleRange = graphData?.yAxis
+      ? graphData.yAxis.max - graphData.yAxis.min
+      : 450;
+
     if (type === 'less_than') {
-      // Прогресс = насколько мы ниже цели (чем ниже, тем лучше)
-      progress = Math.min(100, Math.max(0, ((value - currentRange.range) / value) * 100));
-    } else if (type === 'greater_than') {
-      // Прогресс = насколько мы выше цели
-      const maxPossible = 600 - 150; // max - min из yAxis
-      progress = Math.min(100, Math.max(0, ((currentRange.range - value) / (maxPossible - value)) * 100));
-    } else if (type === 'between') {
-      // Прогресс = насколько мы в диапазоне
-      if (currentRange.range >= min && currentRange.range <= max) {
+      if (range < numValue) {
         progress = 100;
-      } else if (currentRange.range < min) {
-        progress = (currentRange.range / min) * 50;
       } else {
-        const overshoot = currentRange.range - max;
-        const maxOvershoot = 200; // примерный максимум
-        progress = Math.max(50, 100 - (overshoot / maxOvershoot) * 50);
+        progress = Math.max(0, Math.min(99, ((numValue / range) * 100)));
       }
-    } else if (type === 'close_to') {
-      // Прогресс = насколько близко к цели
-      const distance = Math.abs(currentRange.range - value);
-      progress = Math.max(0, 100 - (distance / tolerance) * 100);
+    }
+    else if (type === 'greater_than') {
+      if (range > numValue) {
+        progress = 100;
+      } else {
+        progress = Math.max(0, Math.min(99, (range / numValue) * 100));
+      }
+    }
+    else if (type === 'between') {
+      if (range >= min && range <= max) {
+        progress = 100;
+      } else if (range < min) {
+        progress = Math.max(0, Math.min(50, (range / min) * 50));
+      } else {
+        const overshoot = range - max;
+        const maxOvershoot = maxPossibleRange - max;
+        if (maxOvershoot > 0) {
+          progress = Math.max(0, Math.min(50, 50 - (overshoot / maxOvershoot) * 50));
+        } else {
+          progress = 0;
+        }
+      }
+    }
+    else if (type === 'exact') {
+      const targetMin = min;
+      const targetMax = max;
+      const minDiff = Math.abs(currentRange.min - targetMin);
+      const maxDiff = Math.abs(currentRange.max - targetMax);
+      const exactTolerance = 10;
+
+      if (minDiff <= exactTolerance && maxDiff <= exactTolerance) {
+        progress = 100;
+      } else {
+        const minProgress = Math.max(0, 100 - (minDiff / exactTolerance) * 50);
+        const maxProgress = Math.max(0, 100 - (maxDiff / exactTolerance) * 50);
+        progress = (minProgress + maxProgress) / 2;
+      }
+    }
+    else if (type === 'close_to') {
+      const distance = Math.abs(range - value);
+      const tol = tolerance || 10;
+
+      if (distance <= tol) {
+        progress = 100;
+      } else {
+        const maxDistance = Math.max(tol, maxPossibleRange);
+        progress = Math.max(0, 100 - ((distance - tol) / (maxDistance - tol)) * 100);
+      }
+    }
+    else if (type === 'multiple_of') {
+      const remainder = range % value;
+      if (remainder === 0) {
+        progress = 100;
+      } else {
+        progress = Math.max(0, 100 - (remainder / value) * 100);
+      }
     }
 
     return Math.round(progress);
@@ -210,13 +253,12 @@ function ProgressBar({ currentRange, challenge }) {
   const progress = calculateProgress();
 
   return (
-    <div className={styles['progress-container']}>
-      <div className={styles['progress-label']}>
+    <div >
+      <div>
         Progress: {progress}%
       </div>
-      <div className={styles['progress-bar-wrapper']}>
-        <div 
-          className={styles['progress-bar']}
+      <div>
+        <div
           style={{ width: `${progress}%` }}
         />
       </div>
@@ -227,54 +269,24 @@ function ProgressBar({ currentRange, challenge }) {
 export default ProgressBar;
 ```
 
-#### Шаг 2: Создать `frontend/src/components/ProgressBar.module.css`
-
-```css
-.progress-container {
-  margin: 20px 0;
-  padding: 15px;
-  background: #f8f9fa;
-  border-radius: 8px;
-}
-
-.progress-label {
-  font-size: 14px;
-  font-weight: 600;
-  color: #666;
-  margin-bottom: 8px;
-}
-
-.progress-bar-wrapper {
-  width: 100%;
-  height: 20px;
-  background: #e0e0e0;
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.progress-bar {
-  height: 100%;
-  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-  transition: width 0.3s ease;
-  border-radius: 10px;
-}
-```
-
-#### Шаг 3: Обновить `frontend/src/App.jsx`
+#### Шаг 2: Обновить `frontend/src/App.jsx`
 Импортировать и использовать компонент:
 
 ```jsx
 import ProgressBar from './components/ProgressBar';
 
 // В компоненте App, добавить после BubbleGraph:
-{graphData && challenge && (
-  <ProgressBar 
-    currentRange={{
-      range: Math.max(...points.map(p => p.y)) - Math.min(...points.map(p => p.y))
-    }}
-    challenge={challenge}
-  />
-)}
+{graphData && challenge && points.length > 0 && (
+        <ProgressBar
+            currentRange={{
+            min: Math.min(...points.map(p => p.y)),
+            max: Math.max(...points.map(p => p.y)),
+            range: Math.max(...points.map(p => p.y)) - Math.min(...points.map(p => p.y))
+            }}
+            challenge={challenge}
+            graphData={graphData}
+        />
+        )}
 ```
 
 ### Время выполнения: 20-25 минут

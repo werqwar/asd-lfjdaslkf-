@@ -1072,90 +1072,72 @@ export default Feedback;
 Добавить обработчик клика на график:
 
 ```jsx
-// Добавить обработчик клика на область графика
 const handleChartClick = useCallback((e) => {
-  if (e.target.tagName === 'circle') {
-    // Если клик был по точке, не создаём новую
-    return;
-  }
-  
-  const bounds = getChartBounds();
-  if (!bounds) return;
-  
-  // Получаем координаты клика относительно контейнера графика
-  const rect = e.currentTarget.getBoundingClientRect();
-  const clickX = e.clientX - rect.left;
-  const clickY = e.clientY - rect.top;
-  
-  // Проверяем, что клик был в области графика (не на осях)
-  const marginLeft = 60; // примерное значение margin для осей
-  const marginRight = 20;
-  const marginTop = 20;
-  const marginBottom = 60;
-  
-  if (clickX < marginLeft || clickX > rect.width - marginRight ||
-      clickY < marginTop || clickY > rect.height - marginBottom) {
-    return; // Клик вне области графика
-  }
-  
-  // Преобразуем координаты клика в координаты данных
-  const chartWidth = rect.width - marginLeft - marginRight;
-  const chartHeight = rect.height - marginTop - marginBottom;
-  
-  const x = graphData.xAxis.min + 
-    ((clickX - marginLeft) / chartWidth) * 
-    (graphData.xAxis.max - graphData.xAxis.min);
-  
-  const y = graphData.yAxis.max - 
-    ((clickY - marginTop) / chartHeight) * 
-    (graphData.yAxis.max - graphData.yAxis.min);
-  
-  // Ограничиваем значения по осям
-  const clampedX = Math.max(
-    graphData.xAxis.min,
-    Math.min(graphData.xAxis.max, x)
-  );
-  const clampedY = Math.max(
-    graphData.yAxis.min,
-    Math.min(graphData.yAxis.max, y)
-  );
-  
-  // Создаём новую точку
-  const newPoint = {
-    id: `point-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    name: `Point ${points.length + 1}`,
-    x: Math.round(clampedX),
-    y: Math.round(clampedY),
-    z: 50 // размер по умолчанию
-  };
-  
-  // Обновляем список точек
-  const updatedPoints = [...points, newPoint];
-  onPointUpdate(updatedPoints);
+    if (e.target.tagName === 'circle') {
+        return;
+    }
+    
+    const bounds = getChartBounds();
+    if (!bounds) return;
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+    
+    const marginLeft = 60;
+    const marginRight = 20;
+    const marginTop = 20;
+    const marginBottom = 60;
+    
+    if (clickX < marginLeft || clickX > rect.width - marginRight ||
+        clickY < marginTop || clickY > rect.height - marginBottom) {
+        return;
+    }
+    
+    const chartWidth = rect.width - marginLeft - marginRight;
+    const chartHeight = rect.height - marginTop - marginBottom;
+    
+    const x = graphData.xAxis.min + 
+        ((clickX - marginLeft) / chartWidth) * 
+        (graphData.xAxis.max - graphData.xAxis.min);
+    
+    const y = graphData.yAxis.max - 
+        ((clickY - marginTop) / chartHeight) * 
+        (graphData.yAxis.max - graphData.yAxis.min);
+    
+    const clampedX = Math.max(
+        graphData.xAxis.min,
+        Math.min(graphData.xAxis.max, x)
+    );
+    const clampedY = Math.max(
+        graphData.yAxis.min,
+        Math.min(graphData.yAxis.max, y)
+    );
+    
+    const defaultSize =
+        graphData?.bubbleSize?.values?.[1] ??
+        graphData?.bubbleSize?.values?.[0] ??
+        2.5;
+
+    const newPoint = {
+        id: `point-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        name: `Point ${points.length + 1}`,
+        x: Math.round(clampedX),
+        y: Math.round(clampedY),
+        size: defaultSize
+    };
+    
+    const updatedPoints = [...points, newPoint];
+    onPointUpdate(updatedPoints);
 }, [getChartBounds, graphData, points, onPointUpdate]);
 
 // В JSX, добавить onClick на контейнер графика:
-<div 
-  onClick={handleChartClick}
+<div
+  ref={containerRef}
+  className={styles['chart-wrapper']}
   style={{ cursor: 'crosshair', position: 'relative' }}
+  onClick={handleChartClick}
 >
-  {/* Компонент графика */}
-</div>
-```
-
-Альтернативный вариант с использованием координат от Recharts:
-
-```jsx
-// Использовать onMouseDown на компоненте Scatter
-<ScatterChart
-  onMouseDown={(e) => {
-    if (e.target.tagName === 'svg' || e.target.tagName === 'g') {
-      handleChartClick(e);
-    }
-  }}
->
-  {/* ... */}
-</ScatterChart>
 ```
 
 #### Обновить `frontend/src/App.jsx`
